@@ -1,0 +1,6 @@
+[submodule "ToluaUnity"]
+	path = ToluaUnity
+	url = https://github.com/edoublezh/tolua.git
+[submodule "ToluaCode"]
+	path = ToluaCode
+	url = https://github.com/edoublezh/tolua_runtime.git

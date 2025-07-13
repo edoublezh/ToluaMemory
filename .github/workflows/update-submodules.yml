@@ -1,0 +1,25 @@
+name: Sync Submodules
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # 每天凌晨自动更新（UTC 时间）
+  workflow_dispatch:      # 也可以手动点按钮执行
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout ToluaMemory
+      uses: actions/checkout@v3
+      with:
+        submodules: true
+        token: ${{ secrets.PAT }}
+
+    - name: Update Submodules
+      run: |
+        git config --global user.email "actions@github.com"
+        git config --global user.name "github-actions"
+        git submodule update --remote --merge
+        git add ToluaCode ToluaUnity
+        git commit -m "🤖 自动同步子模块指向最新 commit" || echo "No changes"
+        git push

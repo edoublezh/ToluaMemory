@@ -5,4 +5,4 @@
 [submodule "ToluaCode"]
 	path = ToluaCode
 	url = https://github.com/edoublezh/tolua_runtime.git
-	branch = master
+	branch = main

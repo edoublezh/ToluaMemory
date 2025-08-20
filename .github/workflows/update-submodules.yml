@@ -2,24 +2,61 @@ name: Sync Submodules
 
 on:
   schedule:
-    - cron: '0 2 * * *'  # 每天凌晨自动更新（UTC 时间）
-  workflow_dispatch:      # 也可以手动点按钮执行
+    - cron: '0 2 * * *'      # 每天 02:00 UTC
+  workflow_dispatch:
+  repository_dispatch:
+    types: [bump-submodules]  # 接收子仓库通知
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-submodules
+  cancel-in-progress: true
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout ToluaMemory
-      uses: actions/checkout@v3
-      with:
-        submodules: true
-        token: ${{ secrets.actionUse }}
+      - name: Checkout ToluaMemory
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          # 如需用你自建 PAT 推回，可加：
+          # token: ${{ secrets.actionUse }}
 
-    - name: Update Submodules
-      run: |
-        git config --global user.email "actions@github.com"
-        git config --global user.name "github-actions"
-        git submodule update --remote --merge
-        git add ToluaCode ToluaUnity
-        git commit -m "🤖 自动同步子模块指向最新 commit" || echo "No changes"
-        git push
+      - name: Ensure submodule branch tracking (master)
+        run: |
+          need_commit=0
+          if ! git config -f .gitmodules submodule.ToluaCode.branch >/dev/null; then
+            git config -f .gitmodules submodule.ToluaCode.branch master
+            need_commit=1
+          fi
+          if ! git config -f .gitmodules submodule.ToluaUnity.branch >/dev/null; then
+            git config -f .gitmodules submodule.ToluaUnity.branch master
+            need_commit=1
+          fi
+          if [ "$need_commit" -eq 1 ]; then
+            git add .gitmodules
+            git -c user.name="github-actions[bot]" \
+                -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+                commit -m "chore: set submodule branch tracking to master"
+          fi
+
+      - name: Sync & Update submodules to latest (no merge)
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git submodule sync --recursive
+          # 关键：使用 --remote --force，而不是 --merge
+          git submodule update --init --recursive --remote --force
+
+          if ! git diff --quiet --submodule=diff; then
+            git add ToluaCode ToluaUnity .gitmodules
+            git commit -m "🤖 bump submodules to latest"
+            git push
+          else
+            echo "No submodule changes."
+          fi

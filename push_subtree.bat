@@ -1,7 +1,7 @@
 @echo off
 setlocal
 
-:: 检查是否提供了参数
+:: Check if an argument is provided
 if "%~1"=="" (
     echo.
     echo Usage: %~n0 [ToluaCode ^| ToluaUnity]
@@ -9,7 +9,7 @@ if "%~1"=="" (
     goto :eof
 )
 
-:: 检查要推送哪个子树 (不区分大小写)
+:: Check which subtree to push (case-insensitive)
 if /I "%~1"=="ToluaCode" (
     echo.
     echo =================================================================

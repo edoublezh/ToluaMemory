@@ -1,0 +1,16 @@
+name: notify-parent
+
+on:
+  push:
+    branches: [ master ]  # 如用其他分支，请改这里
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch to parent (ToluaMemory)
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.PARENT_PAT }}   # 子仓库里的 Secret
+          repository: edoublezh/ToluaMemory  # 父仓库
+          event-type: bump-submodules

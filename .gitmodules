@@ -1,8 +1,0 @@
-[submodule "ToluaUnity"]
-	path = ToluaUnity
-	url = https://github.com/edoublezh/tolua.git
-	branch = master
-[submodule "ToluaCode"]
-	path = ToluaCode
-	url = https://github.com/edoublezh/tolua_runtime.git
-	branch = master

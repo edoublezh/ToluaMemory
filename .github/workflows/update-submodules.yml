@@ -55,7 +55,7 @@ jobs:
 
           if ! git diff --quiet --submodule=diff; then
             git add ToluaCode ToluaUnity .gitmodules
-            git commit -m "🤖 bump submodules to latest"
+            git commit -m "同步修改"
             git push
           else
             echo "No submodule changes."

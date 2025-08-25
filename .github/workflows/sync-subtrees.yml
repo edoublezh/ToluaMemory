@@ -2,23 +2,64 @@ name: Sync Subtrees
 
 on:
   schedule:
-    - cron: '0 2 * * *'  # 每天凌晨自动更新（UTC 时间）
-  workflow_dispatch:      # 也可以手动点按钮执行
+    - cron: '0 2 * * *'   # 每天 02:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write   # 让 GITHUB_TOKEN 有推送权限
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout ToluaMemory
-      uses: actions/checkout@v3
-      with:
-        token: ${{ secrets.actionUse }}
+      - name: Checkout ToluaMemory (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0            # 需要完整历史，subtree 才能工作
+          token: ${{ secrets.actionUse || github.token }}  # 你的 PAT 优先；否则退回 GITHUB_TOKEN
 
-    - name: Update Subtrees
-      run: |
-        git config --global user.email "actions@github.com"
-        git config --global user.name "github-actions"
-        # 拉取子树更新，--squash会把子树的多个commit合并成一个，-m是自定义的commit信息
-        git subtree pull --prefix=ToluaCode https://github.com/edoublezh/tolua_runtime.git master --squash -m "🤖 chore(ToluaCode): Sync from upstream"
-        git subtree pull --prefix=ToluaUnity https://github.com/edoublezh/tolua.git master --squash -m "🤖 chore(ToluaUnity): Sync from upstream"
-        git push
+      - name: Git identity
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "github-actions"
+
+      - name: Sync ToluaCode (tolua_runtime.git)
+        run: |
+          set -e
+          PREFIX="ToluaCode"
+          REPO="https://github.com/edoublezh/tolua_runtime.git"
+          BRANCH="master"   # 若上游是 main，请改成 main
+
+          # 判断是否已有 subtree（在历史中存在以该 prefix 的 subtree 提交）
+          if git rev-parse -q --verify "$(git subtree split --prefix="$PREFIX" 2>/dev/null)" >/dev/null; then
+            echo "Subtree $PREFIX exists. Pulling…"
+            git subtree pull --prefix="$PREFIX" "$REPO" "$BRANCH" --squash -m "🤖 chore($PREFIX): Sync from upstream"
+          else
+            echo "Subtree $PREFIX not found. Adding…"
+            # 目录若已存在但不是 subtree，会尝试合并；如冲突，请先把现有目录清空或确保与上游一致
+            git subtree add --prefix="$PREFIX" "$REPO" "$BRANCH" --squash -m "🤖 chore($PREFIX): Init from upstream"
+          fi
+
+      - name: Sync ToluaUnity (tolua.git)
+        run: |
+          set -e
+          PREFIX="ToluaUnity"
+          REPO="https://github.com/edoublezh/tolua.git"
+          BRANCH="master"   # 若上游是 main，请改成 main
+
+          if git rev-parse -q --verify "$(git subtree split --prefix="$PREFIX" 2>/dev/null)" >/dev/null; then
+            echo "Subtree $PREFIX exists. Pulling…"
+            git subtree pull --prefix="$PREFIX" "$REPO" "$BRANCH" --squash -m "🤖 chore($PREFIX): Sync from upstream"
+          else
+            echo "Subtree $PREFIX not found. Adding…"
+            git subtree add --prefix="$PREFIX" "$REPO" "$BRANCH" --squash -m "🤖 chore($PREFIX): Init from upstream"
+          fi
+
+      - name: Push changes (if any)
+        run: |
+          # 避免空推送报错
+          if ! git diff --quiet HEAD; then
+            git push
+          else
+            echo "No changes to push."
+          fi
